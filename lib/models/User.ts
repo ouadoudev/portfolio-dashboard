@@ -8,7 +8,7 @@ const UserSchema = new Schema(
         title: {type: String, required: true},
         tagline: {type: String, required: true},
         introduction:{type: String, required:true},
-        KeySkills: [{type: String}],
+        keySkills: [{type: String}],
         status: {
             type: String,
             enum: [
