@@ -30,39 +30,36 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-const formData = await request.formData();
-await connectToDatabase()
-const latestExperience = await WorkExperience.findOne().sort({ id: -1 });
-const newId = latestExperience ? latestExperience.id + 1 : 1;
+    const formData = await request.formData();
+    await connectToDatabase();
+    const latestExperience = await WorkExperience.findOne().sort({ id: -1 });
+    const newId = latestExperience ? latestExperience.id + 1 : 1;
 
-const title = formData.get("title") as string ;
-const company =formData.get("company") as string  ;
-const location =formData.get("location") as string  ;
-const period =formData.get("period") as string ;
-const description =formData.get("description") as string  ;
-const technologiesInput =formData.get("technologies") as string  ;
-const responsibilitiesInput =formData.get("responsibilities") as string ;
-const technologies = technologiesInput.split(",").map((technology)=>technology.trim());
-const responsibilities = responsibilitiesInput.split(",").map((responsibility)=>responsibility.trim());
-const imageFile =formData.get("companyLogo") as File  ;
-const companyLogoUrl= imageFile ? await uploadToCloudinary(imageFile, "company/logos") : "";
+    const title = formData.get("title") as string;
+    const company = formData.get("company") as string;
+    const location = formData.get("location") as string;
+    const period = formData.get("period") as string;
+    const description = formData.get("description") as string;
+    const technologies = formData.getAll("technologies").map((tech) => tech.toString().trim());
+    const responsibilities = formData.getAll("responsibilities").map((resp) => resp.toString().trim());
+    const imageFile = formData.get("companyLogo") as File;
+    const companyLogoUrl = imageFile ? await uploadToCloudinary(imageFile, "company/logos") : "";
 
-const newExperience = new WorkExperience({
-  id: newId,
-  title,
-  company,
-  location,
-  period,
-  description,
-  technologies,
-  responsibilities,
-  companyLogo : companyLogoUrl,
-  });
-  await newExperience.save();
-  return NextResponse.json(newExperience,{status: 201});
+    const newExperience = new WorkExperience({
+      id: newId,
+      title,
+      company,
+      location,
+      period,
+      description,
+      technologies,
+      responsibilities,
+      companyLogo: companyLogoUrl,
+    });
+    await newExperience.save();
+    return NextResponse.json(newExperience, { status: 201 });
   } catch (error) {
-    console.error("Error creating work experience:", error)
-    return NextResponse.json({ error: "Failed to create work experience" }, { status: 500 })
+    console.error("Error creating work experience:", error);
+    return NextResponse.json({ error: "Failed to create work experience" }, { status: 500 });
   }
 }
-
