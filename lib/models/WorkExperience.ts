@@ -9,14 +9,8 @@ const workExperienceSchema = new Schema(
     location: String,
     period: String,
     description: String,
-    responsibilities: {
-      type: [String],
-      required: true,
-    },
-    technologies: {
-      type: [String],
-      required: true,
-    },
+    responsibilities:  [String],
+    technologies: [String]
   },
 )
 
