@@ -56,16 +56,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const location = formData.get("location") as string;
     const period = formData.get("period") as string;
     const description = formData.get("description") as string;
-    const technologiesInput = formData.get("technologies") as string;
-    const responsibilitiesInput = formData.get("responsibilities") as string;
 
-    // Process arrays (technologies and responsibilities)
-    const technologies = technologiesInput ? technologiesInput.split(",").map(t => t.trim()) : [];
-    const responsibilities = responsibilitiesInput ? responsibilitiesInput.split(",").map(r => r.trim()) : [];
+    // Use formData.getAll() to retrieve array fields
+    const technologies = formData.getAll("technologies").map((tech) => tech.toString().trim());
+    const responsibilities = formData.getAll("responsibilities").map((resp) => resp.toString().trim());
 
     // Handle company logo (upload new or keep existing)
     const imageFile = formData.get("companyLogo") as File;
-    let companyLogoUrl = existingExperience.companyLogo; 
+    let companyLogoUrl = existingExperience.companyLogo;
     if (imageFile && imageFile.size > 0) {
       companyLogoUrl = await uploadToCloudinary(imageFile, "company/logos");
     }
@@ -92,7 +90,6 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     return NextResponse.json({ error: "Failed to update work experience" }, { status: 500 });
   }
 }
-
 // DELETE work experience by ID
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
