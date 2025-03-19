@@ -4,7 +4,7 @@ const companySchema = new Schema(
   {
     id: { type: Number, required: true },
     name: String,
-    img: String,
+    Logo: String,
   },
   { timestamps: true },
 )

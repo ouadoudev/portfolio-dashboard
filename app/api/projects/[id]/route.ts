@@ -53,7 +53,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const thumbnailFile = formData.get("thumbnail") as File;
     const thumbnailUrl = thumbnailFile
       ? await uploadToCloudinary(thumbnailFile, "projects/thumbnails")
-      : existingProject.thumbnail; // Retain existing thumbnail if no new file is provided
+      : existingProject.thumbnail; 
 
     // Handle images update
     const imageFiles = formData.getAll("images") as File[];

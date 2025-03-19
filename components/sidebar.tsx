@@ -9,12 +9,10 @@ import {
   MessageSquare,
   Briefcase,
   FolderKanban,
-  Settings,
   GraduationCap,
   Award,
   Wrench,
   Contact,
-  Globe,
 } from "lucide-react";
 import {
   Sidebar,
@@ -87,18 +85,6 @@ export default function SidebarComponent() {
       icon: Contact,
       href: "/contact",
       color: "text-blue-500",
-    },
-    {
-      label: t("sidebar.translations"),
-      icon: Globe,
-      href: "/translations",
-      color: "text-green-500",
-    },
-    {
-      label: t("sidebar.settings"),
-      icon: Settings,
-      href: "/settings",
-      color: "text-gray-500",
     },
   ];
 
