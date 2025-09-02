@@ -2,8 +2,6 @@ import { NextResponse } from "next/server"
 import connectToDatabase from "@/lib/db"
 import User from "@/lib/models/User"
 import cloudinary from "@/lib/cloudinary"
-import fs from "fs"
-import path from "path"
 
 // Helper function to upload files to Cloudinary
 const uploadToCloudinary = async (file: File, folder: string) => {
@@ -13,28 +11,9 @@ const uploadToCloudinary = async (file: File, folder: string) => {
 
   const uploadResponse = await cloudinary.uploader.upload(dataUri, {
     folder,
+    resource_type: "auto", // Allows uploading non-image files like PDFs
   })
   return uploadResponse.secure_url
-}
-
-// Helper function to save CV file
-const saveCvFile = async (file: File) => {
-  // Ensure the uploads directory exists
-  const uploadsDir = path.join(process.cwd(), "public", "uploads")
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true })
-  }
-
-  // Generate a unique filename
-  const cvFileName = `cv-${Date.now()}${path.extname(file.name)}`
-  const cvFilePath = path.join(uploadsDir, cvFileName)
-
-  // Convert the file to a buffer and save it
-  const buffer = Buffer.from(await file.arrayBuffer())
-  fs.writeFileSync(cvFilePath, buffer)
-
-  // Return the public URL path
-  return `/uploads/${cvFileName}`
 }
 
 // GET all users
@@ -85,10 +64,18 @@ export async function POST(request: Request) {
     const imageFile = formData.get("image") as File
     const imageUrl = imageFile ? await uploadToCloudinary(imageFile, "users/images") : ""
 
-    // Upload CV and save the file path for download
+    // Upload CV to Cloudinary
     let cvUrl = ""
     if (cvFile) {
-      cvUrl = await saveCvFile(cvFile)
+      // Validate file type
+      const allowedTypes = ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]
+      if (!allowedTypes.includes(cvFile.type)) {
+        return NextResponse.json(
+          { error: "Only PDF, DOC, and DOCX files are allowed for CV!" },
+          { status: 400 }
+        )
+      }
+      cvUrl = await uploadToCloudinary(cvFile, "users/cvs")
     }
 
     // Save to the database
@@ -112,4 +99,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to create user" }, { status: 500 })
   }
 }
-

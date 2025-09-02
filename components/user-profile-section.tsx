@@ -289,7 +289,7 @@ export default function UserProfileSection({
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent className="max-h-52 overflow-y-auto">
-                    <SelectItem value="Open to work">Open to work</SelectItem>
+                    <SelectItem value="Open to Work">Open to work</SelectItem>
                     <SelectItem value="Freelancing">Freelancing</SelectItem>
                     <SelectItem value="Employed">Employed</SelectItem>
                     <SelectItem value="Available for Collaboration">

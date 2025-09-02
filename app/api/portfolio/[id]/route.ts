@@ -2,8 +2,6 @@ import { NextResponse } from "next/server"
 import connectToDatabase from "@/lib/db"
 import User from "@/lib/models/User"
 import cloudinary from "@/lib/cloudinary"
-import fs from "fs"
-import path from "path"
 
 // Helper function to upload files to Cloudinary
 const uploadToCloudinary = async (file: File, folder: string) => {
@@ -13,35 +11,17 @@ const uploadToCloudinary = async (file: File, folder: string) => {
 
   const uploadResponse = await cloudinary.uploader.upload(dataUri, {
     folder,
+    resource_type: "auto", // Allows uploading non-image files like PDFs
   })
-  return uploadResponse.secure_url
-}
-
-// Helper function to save CV file
-const saveCvFile = async (file: File) => {
-  // Ensure the uploads directory exists
-  const uploadsDir = path.join(process.cwd(), "public", "uploads")
-  if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir, { recursive: true })
-  }
-
-  // Generate a unique filename
-  const cvFileName = `cv-${Date.now()}${path.extname(file.name)}`
-  const cvFilePath = path.join(uploadsDir, cvFileName)
-
-  // Convert the file to a buffer and save it
-  const buffer = Buffer.from(await file.arrayBuffer())
-  fs.writeFileSync(cvFilePath, buffer)
-
-  // Return the public URL path
-  return `/uploads/${cvFileName}`
+  return { secure_url: uploadResponse.secure_url, public_id: uploadResponse.public_id }
 }
 
 // GET a single user by ID
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectToDatabase()
-    const user = await User.findOne({ id: Number.parseInt(params.id) })
+    const { id } = await params
+    const user = await User.findOne({ id: Number.parseInt(id) })
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
@@ -55,13 +35,14 @@ export async function GET(request: Request, { params }: { params: { id: string }
 }
 
 // PUT (or PATCH) to update a user
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const formData = await request.formData()
     await connectToDatabase()
 
     // Validate the ID
-    const userId = Number.parseInt(params.id)
+    const { id } = await params
+    const userId = Number.parseInt(id)
     if (isNaN(userId)) {
       return NextResponse.json({ error: "Invalid user ID" }, { status: 400 })
     }
@@ -81,57 +62,73 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const status = formData.get("status") as string
     const yearsOfExperience = Number.parseInt(formData.get("yearsOfExperience") as string) || user.yearsOfExperience
     const cvFile = formData.get("cv") as File
+    const imageFile = formData.get("image") as File
 
     const keySkills = keySkillsInput
-      .split(",")
+      ?.split(",")
       .map((skill) => skill.trim())
-      .filter(Boolean)
+      .filter(Boolean) || []
 
     // Handle image upload
-    const imageFile = formData.get("image") as File
     let imageUrl = user.image // Keep the existing image by default
-
     if (imageFile) {
       // If a new image is uploaded, delete the old image from Cloudinary (if it exists)
       if (user.image) {
         try {
-          // Extract the public ID from the Cloudinary URL
           const publicId = user.image.split("/").pop()?.split(".")[0]
           if (publicId) {
             await cloudinary.uploader.destroy(`users/images/${publicId}`)
           }
         } catch (error) {
           console.error("Error deleting old image from Cloudinary:", error)
-          // Log the error but continue with the update
         }
       }
 
       // Upload the new image to Cloudinary
-      imageUrl = await uploadToCloudinary(imageFile, "users/images")
+      const imageUpload = await uploadToCloudinary(imageFile, "users/images")
+      imageUrl = imageUpload.secure_url
     }
 
     // Handle CV file upload
     let cvUrl = user.cv // Keep the existing CV by default
     if (cvFile) {
-      // Delete the old CV file if it exists
+      // Validate file type
+      const allowedTypes = [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ]
+      if (!allowedTypes.includes(cvFile.type)) {
+        return NextResponse.json(
+          { error: "Only PDF, DOC, and DOCX files are allowed for CV!" },
+          { status: 400 }
+        )
+      }
+
+      // If a new CV is uploaded, delete the old CV from Cloudinary (if it exists)
       if (user.cv) {
-        const oldCvPath = path.join(process.cwd(), "public", user.cv)
-        if (fs.existsSync(oldCvPath)) {
-          fs.unlinkSync(oldCvPath)
+        try {
+          const publicId = user.cv.split("/").pop()?.split(".")[0]
+          if (publicId) {
+            await cloudinary.uploader.destroy(`users/cvs/${publicId}`, { resource_type: "raw" })
+          }
+        } catch (error) {
+          console.error("Error deleting old CV from Cloudinary:", error)
         }
       }
 
-      // Save the new CV file
-      cvUrl = await saveCvFile(cvFile)
+      // Upload the new CV to Cloudinary
+      const cvUpload = await uploadToCloudinary(cvFile, "users/cvs")
+      cvUrl = cvUpload.secure_url
     }
 
     // Update user fields
-    user.fullName = fullName
-    user.title = title
-    user.tagline = tagline
-    user.introduction = introduction
-    user.keySkills = keySkills
-    user.status = status
+    user.fullName = fullName || user.fullName
+    user.title = title || user.title
+    user.tagline = tagline || user.tagline
+    user.introduction = introduction || user.introduction
+    user.keySkills = keySkills.length ? keySkills : user.keySkills
+    user.status = status || user.status
     user.yearsOfExperience = yearsOfExperience
     user.image = imageUrl
     user.cv = cvUrl
@@ -147,37 +144,39 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 }
 
 // DELETE a user
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     await connectToDatabase()
+    const { id } = await params
     const user = await User.findOneAndDelete({
-      id: Number.parseInt(params.id),
+      id: Number.parseInt(id),
     })
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
-    // Delete CV file if it exists
+    // Delete CV from Cloudinary if it exists
     if (user.cv) {
-      const cvFilePath = path.join(process.cwd(), "public", user.cv)
-      if (fs.existsSync(cvFilePath)) {
-        fs.unlinkSync(cvFilePath) // Delete the file
+      try {
+        const publicId = user.cv.split("/").pop()?.split(".")[0]
+        if (publicId) {
+          await cloudinary.uploader.destroy(`users/cvs/${publicId}`, { resource_type: "raw" })
+        }
+      } catch (error) {
+        console.error("Error deleting CV from Cloudinary:", error)
       }
     }
 
     // Delete image from Cloudinary if it exists
     if (user.image) {
       try {
-        // Extract the public ID from the image URL
         const publicId = user.image.split("/").pop()?.split(".")[0]
         if (publicId) {
-          // Delete the image from Cloudinary
           await cloudinary.uploader.destroy(`users/images/${publicId}`)
         }
       } catch (error) {
         console.error("Error deleting image from Cloudinary:", error)
-        // Log the error but continue
       }
     }
 
@@ -187,4 +186,3 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     return NextResponse.json({ error: "Failed to delete user" }, { status: 500 })
   }
 }
-

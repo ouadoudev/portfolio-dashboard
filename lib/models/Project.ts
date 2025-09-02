@@ -39,6 +39,18 @@ const projectSchema = new Schema(
       type: String, 
       required: false, 
     },
+     keyFeatures: [
+      {
+        title: { 
+          type: String, 
+          required: true, 
+        },
+        description: { 
+          type: String, 
+          required: true, 
+        },
+      }
+    ],
   },
   { timestamps: true } 
 );

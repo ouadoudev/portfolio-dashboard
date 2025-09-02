@@ -15,7 +15,10 @@ const uploadToCloudinary = async (file: File, folder: string) => {
   return uploadResponse.secure_url;
 };
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
     await connectToDatabase();
     const project = await Project.findOne({ id: Number.parseInt(params.id) });
@@ -27,17 +30,25 @@ export async function GET(request: Request, { params }: { params: { id: string }
     return NextResponse.json(project);
   } catch (error) {
     console.error("Error fetching project:", error);
-    return NextResponse.json({ error: "Failed to fetch project" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch project" },
+      { status: 500 }
+    );
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
     const formData = await request.formData();
     await connectToDatabase();
 
     // Fetch the existing project
-    const existingProject = await Project.findOne({ id: Number.parseInt(params.id) });
+    const existingProject = await Project.findOne({
+      id: Number.parseInt(params.id),
+    });
     if (!existingProject) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
@@ -48,12 +59,21 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const liveUrl = formData.get("liveUrl") as string;
     const domain = formData.get("domain") as string;
     const githubUrl = formData.get("githubUrl") as string;
-
+    let keyFeatures = existingProject.keyFeatures || [];
+    const featuresString = formData.get("keyFeatures") as string;
+    if (featuresString) {
+      try {
+        const parsedFeatures = JSON.parse(featuresString); 
+        keyFeatures = parsedFeatures; 
+      } catch (err) {
+        console.error("Invalid keyFeatures JSON:", err);
+      }
+    }
     // Handle thumbnail update
     const thumbnailFile = formData.get("thumbnail") as File;
     const thumbnailUrl = thumbnailFile
       ? await uploadToCloudinary(thumbnailFile, "projects/thumbnails")
-      : existingProject.thumbnail; 
+      : existingProject.thumbnail;
 
     // Handle images update
     const imageFiles = formData.getAll("images") as File[];
@@ -75,9 +95,11 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
     // Delete removed images from Cloudinary
     await Promise.all(
-      removedImages.map(async (img: string) => { // Explicitly type img
-        if (img) { // Check if img is defined
-          const publicId = img.split('/').pop()?.split('.')[0]; // Extract public ID from URL
+      removedImages.map(async (img: string) => {
+        // Explicitly type img
+        if (img) {
+          // Check if img is defined
+          const publicId = img.split("/").pop()?.split(".")[0]; // Extract public ID from URL
           if (publicId) {
             await cloudinary.uploader.destroy(publicId);
           }
@@ -87,13 +109,17 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 
     // Handle removed icons
     const removedIcons = formData.getAll("removedIconLists") as string[];
-    const updatedIconLists = iconLists.filter((icon) => !removedIcons.includes(icon));
+    const updatedIconLists = iconLists.filter(
+      (icon) => !removedIcons.includes(icon)
+    );
 
     // Delete removed icons from Cloudinary
     await Promise.all(
-      removedIcons.map(async (icon: string) => { // Explicitly type icon
-        if (icon) { // Check if icon is defined
-          const publicId = icon.split('/').pop()?.split('.')[0]; // Extract public ID from URL
+      removedIcons.map(async (icon: string) => {
+        // Explicitly type icon
+        if (icon) {
+          // Check if icon is defined
+          const publicId = icon.split("/").pop()?.split(".")[0]; // Extract public ID from URL
           if (publicId) {
             await cloudinary.uploader.destroy(publicId);
           }
@@ -113,6 +139,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         iconLists: updatedIconLists,
         liveUrl,
         githubUrl,
+         keyFeatures,
       },
       { new: true }
     );
@@ -120,11 +147,17 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     return NextResponse.json(updatedProject);
   } catch (error) {
     console.error("Error updating project:", error);
-    return NextResponse.json({ error: "Failed to update project" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update project" },
+      { status: 500 }
+    );
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
     await connectToDatabase();
 
@@ -137,9 +170,11 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
     // Delete images from Cloudinary
     await Promise.all(
-      project.images.map(async (img: string) => { // Explicitly type img
-        if (img) { // Check if img is defined
-          const publicId = img.split('/').pop()?.split('.')[0]; // Extract public ID from URL
+      project.images.map(async (img: string) => {
+        // Explicitly type img
+        if (img) {
+          // Check if img is defined
+          const publicId = img.split("/").pop()?.split(".")[0]; // Extract public ID from URL
           if (publicId) {
             await cloudinary.uploader.destroy(publicId);
           }
@@ -149,9 +184,11 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 
     // Delete icons from Cloudinary
     await Promise.all(
-      project.iconLists.map(async (icon: string) => { // Explicitly type icon
-        if (icon) { // Check if icon is defined
-          const publicId = icon.split('/').pop()?.split('.')[0]; // Extract public ID from URL
+      project.iconLists.map(async (icon: string) => {
+        // Explicitly type icon
+        if (icon) {
+          // Check if icon is defined
+          const publicId = icon.split("/").pop()?.split(".")[0]; // Extract public ID from URL
           if (publicId) {
             await cloudinary.uploader.destroy(publicId);
           }
@@ -160,7 +197,9 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     );
 
     // Delete the project from the database
-    const deletedProject = await Project.findOneAndDelete({ id: Number.parseInt(params.id) });
+    const deletedProject = await Project.findOneAndDelete({
+      id: Number.parseInt(params.id),
+    });
 
     if (!deletedProject) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
@@ -169,6 +208,9 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
     return NextResponse.json({ message: "Project deleted successfully" });
   } catch (error) {
     console.error("Error deleting project:", error);
-    return NextResponse.json({ error: "Failed to delete project" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to delete project" },
+      { status: 500 }
+    );
   }
 }

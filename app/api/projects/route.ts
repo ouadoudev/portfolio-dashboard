@@ -40,6 +40,15 @@ export async function POST(request: Request) {
     const liveUrl = formData.get("liveUrl") as string
     const  githubUrl = formData.get("githubUrl") as string
     const domain = formData.get("domain") as string; 
+        let keyFeatures = []
+    const featuresString = formData.get("keyFeatures") as string
+    if (featuresString) {
+      try {
+        keyFeatures = JSON.parse(featuresString) 
+      } catch (err) {
+        console.error("Invalid keyFeatures JSON:", err)
+      }
+    }
 
     // Upload thumbnail
     const thumbnailFile = formData.get("thumbnail") as File
@@ -71,7 +80,8 @@ export async function POST(request: Request) {
       images,
       iconLists,
       liveUrl,
-      githubUrl
+      githubUrl,
+      keyFeatures,
     })
 
     await newProject.save()

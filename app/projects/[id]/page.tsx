@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { DashboardHeader } from "@/components/dashboard-header";
 import { ProjectEdit } from "@/components/project-edit";
 import { Badge } from "@/components/ui/badge";
 
@@ -37,7 +36,6 @@ export default function EditProjectPage() {
   if (loading) {
     return (
       <div className="flex min-h-screen w-full flex-col">
-        <DashboardHeader />
         <main className="flex flex-1 flex-col items-center justify-center">
           Loading...
         </main>
@@ -47,7 +45,6 @@ export default function EditProjectPage() {
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <DashboardHeader />
       <main className="mx-6 ">
         <Badge className="text-xs text-center m-2">Edit Project</Badge>
         <div className="rounded-md border p-4 md:p-6">

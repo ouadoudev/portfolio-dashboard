@@ -25,6 +25,7 @@ interface ProjectData {
   iconLists: (string | File)[];
   liveUrl: string;
   githubUrl: string;
+  keyFeatures: { title: string; description: string }[];
 }
 
 export function ProjectEdit() {
@@ -40,6 +41,7 @@ export function ProjectEdit() {
     iconLists: [],
     liveUrl: "",
     githubUrl: "",
+    keyFeatures: [],
   });
 
   useEffect(() => {
@@ -58,6 +60,7 @@ export function ProjectEdit() {
           iconLists: project.iconLists || [],
           liveUrl: project.liveUrl || "",
           githubUrl: project.githubUrl || "",
+          keyFeatures: project.keyFeatures || [],
         });
       } catch (error) {
         console.error("Error fetching project:", error);
@@ -111,6 +114,29 @@ export function ProjectEdit() {
       return prev;
     });
   };
+  const handleFeatureChange = (
+    index: number,
+    field: "title" | "description",
+    value: string
+  ) => {
+    const updatedFeatures = [...formData.keyFeatures];
+    updatedFeatures[index][field] = value;
+    setFormData((prev) => ({ ...prev, keyFeatures: updatedFeatures }));
+  };
+
+  const addFeature = () => {
+    setFormData((prev) => ({
+      ...prev,
+      keyFeatures: [...prev.keyFeatures, { title: "", description: "" }],
+    }));
+  };
+
+  const removeFeature = (index: number) => {
+    const updatedFeatures = [...formData.keyFeatures];
+    updatedFeatures.splice(index, 1);
+    setFormData((prev) => ({ ...prev, keyFeatures: updatedFeatures }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -130,6 +156,10 @@ export function ProjectEdit() {
       formDataToSend.append("domain", formData.domain);
       formDataToSend.append("liveUrl", formData.liveUrl);
       formDataToSend.append("githubUrl", formData.githubUrl);
+      formDataToSend.append(
+        "keyFeatures",
+        JSON.stringify(formData.keyFeatures)
+      );
 
       // Append thumbnail only if a new one is selected
       if (formData.thumbnail && typeof formData.thumbnail !== "string") {
@@ -361,6 +391,48 @@ export function ProjectEdit() {
           </div>
         </div>
       </div>
+      <div className="grid gap-2">
+        <Label>Key Features</Label>
+        {formData.keyFeatures.map((feature, index) => (
+          <div
+            key={index}
+            className="grid grid-cols-2 gap-2 relative border p-2 rounded-lg"
+          >
+            <div className="grid gap-1">
+              <Label>Title</Label>
+              <Input
+                value={feature.title}
+                onChange={(e) =>
+                  handleFeatureChange(index, "title", e.target.value)
+                }
+                placeholder="Feature title"
+              />
+            </div>
+            <div className="grid gap-1">
+              <Label>Description</Label>
+              <Textarea
+                value={feature.description}
+                onChange={(e) =>
+                  handleFeatureChange(index, "description", e.target.value)
+                }
+                rows={2}
+                placeholder="Feature description"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => removeFeature(index)}
+              className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        ))}
+        <Button type="button" onClick={addFeature} variant="outline">
+          + Add Feature
+        </Button>
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
         <div className="grid gap-2">
           <Label htmlFor="liveUrl">Live URL</Label>

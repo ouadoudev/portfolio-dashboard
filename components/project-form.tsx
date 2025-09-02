@@ -28,6 +28,7 @@ export function ProjectForm({}: ProjectFormProps) {
     iconLists: File[];
     liveUrl: string;
     githubUrl: string;
+    keyFeatures: { title: string; description: string }[];
   }>({
     title: "",
     description: "",
@@ -37,6 +38,7 @@ export function ProjectForm({}: ProjectFormProps) {
     iconLists: [],
     liveUrl: "",
     githubUrl: "",
+    keyFeatures: [],
   });
 
   const handleChange = (
@@ -75,6 +77,29 @@ export function ProjectForm({}: ProjectFormProps) {
     });
   };
 
+  const handleFeatureChange = (
+    index: number,
+    field: "title" | "description",
+    value: string
+  ) => {
+    const updatedFeatures = [...formData.keyFeatures];
+    updatedFeatures[index][field] = value;
+    setFormData((prev) => ({ ...prev, keyFeatures: updatedFeatures }));
+  };
+
+  const addFeature = () => {
+    setFormData((prev) => ({
+      ...prev,
+      keyFeatures: [...prev.keyFeatures, { title: "", description: "" }],
+    }));
+  };
+
+  const removeFeature = (index: number) => {
+    const updatedFeatures = [...formData.keyFeatures];
+    updatedFeatures.splice(index, 1);
+    setFormData((prev) => ({ ...prev, keyFeatures: updatedFeatures }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -87,6 +112,7 @@ export function ProjectForm({}: ProjectFormProps) {
       formDataToSend.append("domain", formData.domain);
       formDataToSend.append("liveUrl", formData.liveUrl);
       formDataToSend.append("githubUrl", formData.githubUrl);
+      formDataToSend.append("keyFeatures", JSON.stringify(formData.keyFeatures))
 
       if (formData.thumbnail) {
         formDataToSend.append("thumbnail", formData.thumbnail);
@@ -265,6 +291,49 @@ export function ProjectForm({}: ProjectFormProps) {
             onChange={handleFileChange}
           />
         </div>
+      </div>
+            <div className="grid gap-2">
+        <Label>Key Features</Label>
+        {formData.keyFeatures.map((feature, index) => (
+          <div
+            key={index}
+            className="grid grid-cols-2 gap-2 items-start border p-2 rounded-lg relative"
+          >
+            <div className="grid gap-1">
+              <Label htmlFor={`feature-title-${index}`}>Title</Label>
+              <Input
+                id={`feature-title-${index}`}
+                value={feature.title}
+                onChange={(e) =>
+                  handleFeatureChange(index, "title", e.target.value)
+                }
+                placeholder="Feature title"
+              />
+            </div>
+            <div className="grid gap-1">
+              <Label htmlFor={`feature-desc-${index}`}>Description</Label>
+              <Textarea
+                id={`feature-desc-${index}`}
+                value={feature.description}
+                onChange={(e) =>
+                  handleFeatureChange(index, "description", e.target.value)
+                }
+                placeholder="Feature description"
+                rows={2}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => removeFeature(index)}
+              className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        ))}
+        <Button type="button" onClick={addFeature} variant="outline">
+          + Add Feature
+        </Button>
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="grid gap-2">
